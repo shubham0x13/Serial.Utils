@@ -3,20 +3,19 @@ using System.IO.Ports;
 
 namespace Serial.Utils;
 
-public class DeviceBoundSerialPort : WatchableSerialPort
+public class DeviceBoundSerialPort : WatchableSerialPortBase
 {
     public string VendorId { get; }
     public string ProductId { get; }
 
-    public DeviceBoundSerialPort(string vendorId, string productId) : this(vendorId, productId, 9600) { }
-
-    public DeviceBoundSerialPort(string vendorId, string productId, int baudRate) : this(vendorId, productId, baudRate, Parity.None) { }
-
-    public DeviceBoundSerialPort(string vendorId, string productId, int baudRate, Parity parity) : this(vendorId, productId, baudRate, parity, 8, StopBits.One) { }
-
-    public DeviceBoundSerialPort(string vendorId, string productId, int baudRate, Parity parity, int dataBits) : this(vendorId, productId, baudRate, parity, dataBits, StopBits.One) { }
-
-    public DeviceBoundSerialPort(string vendorId, string productId, int baudRate, Parity parity, int dataBits, StopBits stopBits) : base("COM1", baudRate, parity, dataBits, stopBits)
+    public DeviceBoundSerialPort(
+        string vendorId,
+        string productId,
+        int baudRate = 9600,
+        Parity parity = Parity.None,
+        int dataBits = 8,
+        StopBits stopBits = StopBits.One)
+        : base(DefaultPortName, baudRate, parity, dataBits, stopBits)
     {
         if (string.IsNullOrWhiteSpace(vendorId))
             throw new ArgumentException("Vendor ID cannot be null or empty.", nameof(vendorId));
@@ -42,14 +41,12 @@ public class DeviceBoundSerialPort : WatchableSerialPort
         return false;
     }
 
-    protected override void OnWatcherPortConnected(object sender, SerialPortWatcherEventArgs e)
-    {
-        if (!IsOpen)
-        {
-            OnPortConnected();
+    protected override bool ShouldHandlePortConnection(SerialPortWatcherEventArgs e)
+        => !IsOpen;
 
-            if (AutoConnect)
-                TryConnect();
-        }
-    }
+    protected override bool ShouldAutoConnect()
+        => AutoConnect;
+
+    protected override bool ShouldHandlePortDisconnection(SerialPortWatcherEventArgs e)
+        => e.PortName == PortName;
 }

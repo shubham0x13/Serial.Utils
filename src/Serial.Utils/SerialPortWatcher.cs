@@ -55,6 +55,12 @@ public class SerialPortWatcher : IDisposable
         return watcher;
     }
 
+    private void ThrowIfDisposed()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(SerialPortWatcher));
+    }
+
     private void OnPortConnected(object sender, EventArrivedEventArgs e)
     {
         PortConnected?.Invoke(this, new SerialPortWatcherEventArgs(e.NewEvent));
@@ -65,40 +71,18 @@ public class SerialPortWatcher : IDisposable
         PortDisconnected?.Invoke(this, new SerialPortWatcherEventArgs(e.NewEvent));
     }
 
-    private void ThrowIfDisposed()
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(SerialPortWatcher));
-    }
-
     public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual void Dispose(bool disposing)
     {
         if (_disposed)
             return;
 
-        if (disposing)
-        {
-            _connectEventWatcher.Stop();
-            _connectEventWatcher.EventArrived -= OnPortConnected;
-            _connectEventWatcher.Dispose();
+        _connectEventWatcher.Stop();
+        _connectEventWatcher.Dispose();
 
-            _disconnectEventWatcher.Stop();
-            _disconnectEventWatcher.EventArrived -= OnPortDisconnected;
-            _disconnectEventWatcher.Dispose();
+        _disconnectEventWatcher.Stop();
+        _disconnectEventWatcher.Dispose();
 
-            PortConnected = null;
-            PortDisconnected = null;
-
-            IsWatching = false;
-        }
-
-        // Clean up unmanaged resources (if any) here
+        IsWatching = false;
 
         _disposed = true;
     }
@@ -117,12 +101,15 @@ public class SerialPortWatcherEventArgs : EventArgs
     {
         ManagementBaseObject targetInstance = (ManagementBaseObject)eventObject["TargetInstance"];
 
-        DeviceID = targetInstance["DeviceID"].ToString();
-        Name = targetInstance["Name"].ToString();
-        Caption = targetInstance["Caption"].ToString();
-        Description = targetInstance["Description"].ToString();
-        ClassGuid = targetInstance["ClassGuid"].ToString();
+        DeviceID = GetPropertyValue(targetInstance, "DeviceID");
+        Name = GetPropertyValue(targetInstance, "Name");
+        Caption = GetPropertyValue(targetInstance, "Caption");
+        Description = GetPropertyValue(targetInstance, "Description");
+        ClassGuid = GetPropertyValue(targetInstance, "ClassGuid");
 
         PortName = SerialPortUtils.ExtractPortNameFromDeviceName(Name) ?? string.Empty;
     }
+
+    private string GetPropertyValue(ManagementBaseObject targetInstance, string propertyName)
+        => targetInstance[propertyName]?.ToString() ?? string.Empty;
 }
