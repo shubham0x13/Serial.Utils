@@ -120,7 +120,7 @@ public abstract class WatchableSerialPortBase : SerialPort
             Close();
             _watcher.Dispose();
         }
-        
+
         base.Dispose(disposing);
         _disposed = true;
     }

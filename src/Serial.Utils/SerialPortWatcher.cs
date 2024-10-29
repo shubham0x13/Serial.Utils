@@ -7,7 +7,7 @@ public class SerialPortWatcher : IDisposable
 {
     private readonly ManagementEventWatcher _connectEventWatcher;
     private readonly ManagementEventWatcher _disconnectEventWatcher;
-    
+
     private bool _disposed;
 
     public event EventHandler<SerialPortWatcherEventArgs>? PortConnected;
