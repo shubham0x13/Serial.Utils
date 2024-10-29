@@ -28,6 +28,15 @@ public class DeviceBoundSerialPort : WatchableSerialPortBase
         ProductId = productId;
     }
 
+    public override void Open()
+    {
+        foreach (string port in SerialPortFinder.GetPortsByVidAndPid(VendorId, ProductId))
+        {
+            PortName = port;
+            base.Open();
+        }
+    }
+
     public override bool TryOpen()
     {
         foreach (string port in SerialPortFinder.GetPortsByVidAndPid(VendorId, ProductId))

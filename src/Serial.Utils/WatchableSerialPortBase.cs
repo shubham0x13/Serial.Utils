@@ -33,7 +33,7 @@ public abstract class WatchableSerialPortBase : SerialPort
         _watcher.Start();
     }
 
-    public new void Open()
+    public new virtual void Open()
     {
         ThrowIfDisposed();
 
