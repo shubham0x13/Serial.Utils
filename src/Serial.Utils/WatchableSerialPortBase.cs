@@ -5,39 +5,43 @@ namespace Serial.Utils;
 
 public abstract class WatchableSerialPortBase : SerialPort
 {
-    protected const string DefaultPortName = "COM1";
-
     private readonly SerialPortWatcher _watcher;
-    private bool _disposed;
 
-    public bool AutoConnect { get; set; } = false;
+    private bool _disposed;
 
     public event EventHandler<SerialPortEventArgs>? PortConnected;
     public event EventHandler<SerialPortEventArgs>? PortDisconnected;
     public event EventHandler<SerialPortEventArgs>? PortOpened;
     public event EventHandler<SerialPortEventArgs>? PortClosed;
 
+    public bool AutoConnect { get; set; }
+
     protected WatchableSerialPortBase(
-        string portName = DefaultPortName,
+        string portName = "COM1",
         int baudRate = 9600,
         Parity parity = Parity.None,
         int dataBits = 8,
-        StopBits stopBits = StopBits.One)
+        StopBits stopBits = StopBits.One,
+        bool autoConnect = false)
         : base(portName, baudRate, parity, dataBits, stopBits)
     {
+        AutoConnect = autoConnect;
+
         _watcher = new SerialPortWatcher();
         _watcher.PortConnected += OnWatcherPortConnected;
         _watcher.PortDisconnected += OnWatcherPortDisconnected;
         _watcher.Start();
     }
 
-    [Obsolete("Use TryConnect() instead.", true)]
-    public new void Open() => throw new NotImplementedException();
+    public new void Open()
+    {
+        ThrowIfDisposed();
 
-    [Obsolete("Use Disconnect() instead.", true)]
-    public new void Close() => throw new NotImplementedException();
+        base.Open();
+        OnPortOpened();
+    }
 
-    public virtual bool TryConnect()
+    public virtual bool TryOpen()
     {
         ThrowIfDisposed();
 
@@ -47,13 +51,13 @@ public abstract class WatchableSerialPortBase : SerialPort
             OnPortOpened();
             return true;
         }
-        catch
+        catch (Exception)
         {
             return false;
         }
     }
 
-    public virtual void Disconnect()
+    public new virtual void Close()
     {
         ThrowIfDisposed();
 
@@ -64,12 +68,12 @@ public abstract class WatchableSerialPortBase : SerialPort
         OnPortClosed();
     }
 
-    protected abstract bool ShouldHandlePortConnection(SerialPortWatcherEventArgs e);
-    protected abstract bool ShouldAutoConnect();
-    protected abstract bool ShouldHandlePortDisconnection(SerialPortWatcherEventArgs e);
+    protected abstract bool ShouldHandleConnection(SerialPortWatcherEventArgs e);
 
-    protected virtual void OnPortConnected() =>
-        PortConnected?.Invoke(this, new SerialPortEventArgs(PortName));
+    protected abstract bool ShouldHandleDisconnection(SerialPortWatcherEventArgs e);
+
+    protected virtual void OnPortConnected(string portName) =>
+        PortConnected?.Invoke(this, new SerialPortEventArgs(portName));
 
     protected virtual void OnPortDisconnected() =>
         PortDisconnected?.Invoke(this, new SerialPortEventArgs(PortName));
@@ -83,23 +87,23 @@ public abstract class WatchableSerialPortBase : SerialPort
     private void ThrowIfDisposed()
     {
         if (_disposed)
-            throw new ObjectDisposedException(nameof(SinglePortWatchableSerialPort));
+            throw new ObjectDisposedException(nameof(WatchableSerialPort));
     }
 
     private void OnWatcherPortConnected(object? sender, SerialPortWatcherEventArgs e)
     {
-        if (ShouldHandlePortConnection(e))
+        if (ShouldHandleConnection(e))
         {
-            OnPortConnected();
+            OnPortConnected(e.PortName);
 
-            if (ShouldAutoConnect())
-                TryConnect();
+            if (AutoConnect)
+                TryOpen();
         }
     }
 
     private void OnWatcherPortDisconnected(object? sender, SerialPortWatcherEventArgs e)
     {
-        if (ShouldHandlePortDisconnection(e))
+        if (ShouldHandleDisconnection(e))
         {
             OnPortDisconnected();
             OnPortClosed();
@@ -108,13 +112,26 @@ public abstract class WatchableSerialPortBase : SerialPort
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && !_disposed)
+        if (_disposed)
+            return;
+
+        if (disposing)
         {
-            Disconnect();
+            Close();
             _watcher.Dispose();
         }
-
-        _disposed = true;
+        
         base.Dispose(disposing);
+        _disposed = true;
+    }
+}
+
+public class SerialPortEventArgs : EventArgs
+{
+    public string PortName { get; }
+
+    internal SerialPortEventArgs(string portName)
+    {
+        PortName = portName;
     }
 }

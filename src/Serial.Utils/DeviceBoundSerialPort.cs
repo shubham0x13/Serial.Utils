@@ -14,8 +14,9 @@ public class DeviceBoundSerialPort : WatchableSerialPortBase
         int baudRate = 9600,
         Parity parity = Parity.None,
         int dataBits = 8,
-        StopBits stopBits = StopBits.One)
-        : base(DefaultPortName, baudRate, parity, dataBits, stopBits)
+        StopBits stopBits = StopBits.One,
+        bool autoConnect = false)
+        : base("COM1", baudRate, parity, dataBits, stopBits, autoConnect)
     {
         if (string.IsNullOrWhiteSpace(vendorId))
             throw new ArgumentException("Vendor ID cannot be null or empty.", nameof(vendorId));
@@ -27,26 +28,19 @@ public class DeviceBoundSerialPort : WatchableSerialPortBase
         ProductId = productId;
     }
 
-    public override bool TryConnect()
+    public override bool TryOpen()
     {
-        string[] ports = SerialPortFinder.GetPortsByVidAndPid(VendorId, ProductId);
-
-        foreach (string port in ports)
+        foreach (string port in SerialPortFinder.GetPortsByVidAndPid(VendorId, ProductId))
         {
             PortName = port;
-            if (base.TryConnect())
+            if (base.TryOpen())
                 return true;
         }
 
         return false;
     }
 
-    protected override bool ShouldHandlePortConnection(SerialPortWatcherEventArgs e)
-        => !IsOpen;
+    protected override bool ShouldHandleConnection(SerialPortWatcherEventArgs e) => !IsOpen;
 
-    protected override bool ShouldAutoConnect()
-        => AutoConnect;
-
-    protected override bool ShouldHandlePortDisconnection(SerialPortWatcherEventArgs e)
-        => e.PortName == PortName;
+    protected override bool ShouldHandleDisconnection(SerialPortWatcherEventArgs e) => e.PortName == PortName;
 }

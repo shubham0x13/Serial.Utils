@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Serial.Utils;
 
-public class SerialPortFinder
+public static class SerialPortFinder
 {
     public static string[] GetPortsByVid(string vid)
     {

@@ -5,14 +5,15 @@ namespace Serial.Utils;
 
 public class SerialPortWatcher : IDisposable
 {
-    public bool IsWatching { get; private set; }
-
     private readonly ManagementEventWatcher _connectEventWatcher;
     private readonly ManagementEventWatcher _disconnectEventWatcher;
+    
+    private bool _disposed;
 
     public event EventHandler<SerialPortWatcherEventArgs>? PortConnected;
     public event EventHandler<SerialPortWatcherEventArgs>? PortDisconnected;
-    private bool _disposed;
+
+    public bool IsWatching { get; private set; }
 
     public SerialPortWatcher(int pollingInterval = 1)
     {
